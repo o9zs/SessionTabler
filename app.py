@@ -31,6 +31,26 @@ while True:
 		if session in config.blacklist: continue
 
 		if ext == ".session":
+			if os.path.exists(os.path.join(config.sessions, f"{session}.session-journal")):
+				connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
+				cursor = connection.cursor()
+				
+				cached = cursor.execute("SELECT name, username, spamblock, task FROM cache WHERE session = ?", (session,)).fetchone()
+				
+				if cached == None:
+					table[session] = {}
+				else:
+					table[session] = {
+						"name": cached[0],
+						"username": cached[1],
+						"spamblock": cached[2],
+						"task": cached[3],
+					}
+					
+				connection.close()
+
+				continue
+
 			client = TelegramClient(os.path.join(config.sessions, session), config.API_ID, config.API_HASH, system_version="5.9")
 
 			async def main():
@@ -90,23 +110,6 @@ while True:
 				console.log(f"Disconnected from [bold]{session}[/bold]")
 
 			client.loop.run_until_complete(main())
-		elif ext == ".session-journal":
-			connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
-			cursor = connection.cursor()
-			
-			cached = cursor.execute("SELECT name, username, spamblock, task FROM cache WHERE session = ?", (session,)).fetchone()
-			
-			if cached == None:
-				table[session] = {}
-			else:
-				table[session] = {
-					"name": cached[0],
-					"username": cached[1],
-					"spamblock": cached[2],
-					"task": cached[3],
-				}
-				
-			connection.close()
 
 	client = TelegramClient(os.path.join(config.sessions, "utonchil.session"), config.API_ID, config.API_HASH, system_version="5.9")
 
