@@ -32,12 +32,16 @@ while True:
 
 		if ext == ".session":
 			if os.path.exists(os.path.join(config.sessions, f"{session}.session-journal")):
+				console.log(f"Found [bold]{session}[/bold].session-journal")
+
 				connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
 				cursor = connection.cursor()
 				
 				cached = cursor.execute("SELECT name, username, spamblock, task FROM cache WHERE session = ?", (session,)).fetchone()
 				
 				if cached == None:
+					console.log(f"No data cached")
+
 					table[session] = {}
 				else:
 					table[session] = {
@@ -46,6 +50,9 @@ while True:
 						"spamblock": cached[2],
 						"task": cached[3],
 					}
+
+					for key, value in table[session].items():
+						console.log(f"{key.capitalize()}: {value}")
 					
 				connection.close()
 
@@ -57,7 +64,7 @@ while True:
 				await client.connect()
 
 				if not await client.is_user_authorized():
-					console.log(f"{session} is unauthorized")
+					console.log(f"[bold]{session}[/bold] is unauthorized")
 
 					return await client.disconnect()
 				
@@ -94,6 +101,9 @@ while True:
 					table[session]["spamblock"] = "отсутствует"
 
 				table[session]["task"] = None
+
+				for key, value in table[session].items():
+					console.log(f"{key.capitalize()}: {value}")
 				
 				connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
 				cursor = connection.cursor()
@@ -111,7 +121,7 @@ while True:
 
 			client.loop.run_until_complete(main())
 
-	client = TelegramClient(os.path.join(config.sessions, "utonchil.session"), config.API_ID, config.API_HASH, system_version="5.9")
+	client = TelegramClient(os.path.join(config.sessions, config.worker), config.API_ID, config.API_HASH, system_version="5.9")
 
 	async def main():
 		async for dialog in client.iter_dialogs():
@@ -129,16 +139,24 @@ while True:
 								spamblock = html.escape(data["spamblock"])
 								task = html.escape(data["task"] or "")
 
-								text += f"<a href=\"https://t.me/{username}\">{name}</a> — спамблок {spamblock}"
-								if task: text += f" ({task})"
+								text += f"<a href=\"https://t.me/{username}\">{name}</a> — спамблок <b>{spamblock}</b>"
+								if task: text += f" (в работе: <b>{task}</b>)"
 							else:
 								text += f"{session} (в работе)"
 
 							text += "\n"
 
-						strfnow = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+						strfnow = datetime.now().strftime("%H:%M:%S %d.%m.%Y")
+
+						full_text = "\n\n".join([
+							"<b>Таблица сессий</b>",
+							text.strip(),
+							f"Всего (так сказать, тотал): <code>{len(table)}</code>",
+							f"Обновлено в <code>{strfnow}</code> (каждые <code>{config.interval}</code> минут)"
+						])
+
 						await message.edit(
-							f"<b>Таблица сессий</b>\n\n{text}\nВсего (так сказать, тотал): <code>{len(table)}</code>\n\nОбновлено в <code>{strfnow}</code>",
+							full_text,
 							parse_mode="html"
 						)
 
@@ -146,14 +164,14 @@ while True:
 
 						break
 				
-	console.log("Logging in to update tables...")
+	console.log(f"Logging in as {config.worker} to update tables...")
 
 	with client:
 		client.loop.run_until_complete(main())
 				
 	console.log("Updated tables")
-	console.log("Sleeping for 3600 seconds...")
-	
-	time.sleep(3600)
+	console.log(f"Sleeping for {config.interval} minutes...")
+
+	time.sleep(config.interval * 60)
 
 	console.log("Woke up")
