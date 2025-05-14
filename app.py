@@ -52,7 +52,7 @@ while True:
 					}
 
 					for key, value in table[session].items():
-						console.log(f"{key.capitalize()}: {value}")
+						console.log(f"{key.capitalize()}: [bold]{value}[/bold]")
 					
 				connection.close()
 
@@ -103,7 +103,7 @@ while True:
 				table[session]["task"] = None
 
 				for key, value in table[session].items():
-					console.log(f"{key.capitalize()}: {value}")
+					console.log(f"{key.capitalize()}: [bold]{value}[/bold]")
 				
 				connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
 				cursor = connection.cursor()
