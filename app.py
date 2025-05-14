@@ -114,8 +114,8 @@ while True:
 		async for dialog in client.iter_dialogs():
 			if dialog.is_user and not dialog.entity.bot:
 				async for message in client.iter_messages(dialog.entity):
-					if "Таблица сессий" in message.text and message.out:
-						console.log(f"Updating table for [bold]{dialog.entity.username or dialog.entity.name}[/bold]...")
+					if message.text and "Таблица сессий" in message.text and message.out:
+						console.log(f"Updating table for [bold]{dialog.entity.username or dialog.name}[/bold]...")
 
 						text = ""
 
@@ -139,13 +139,18 @@ while True:
 							parse_mode="html"
 						)
 
-						console.log(f"Updated table for [bold]{dialog.entity.username or dialog.entity.name}[/bold]")
+						console.log(f"Updated table for [bold]{dialog.entity.username or dialog.name}[/bold]")
 
 						break
 				
-	console.log(f"Logging into [bold]{client.session}[/bold] to update tables...")
+	console.log("Logging in to update tables...")
 
 	with client:
 		client.loop.run_until_complete(main())
+				
+	console.log("Updated tables")
+	console.log("Sleeping for 3600 seconds...")
 	
 	time.sleep(3600)
+
+	console.log("Woke up")
