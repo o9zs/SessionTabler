@@ -41,7 +41,7 @@ while True:
 
 					return await client.disconnect()
 				
-				console.log(f"Connected to {session}")
+				console.log(f"Connected to [bold]{session}[/bold]")
 
 				table[session] = {}
 				
@@ -87,7 +87,7 @@ while True:
 				connection.close()
 				await client.disconnect()
 				
-				console.log(f"Disconnected from {session}")
+				console.log(f"Disconnected from [bold]{session}[/bold]")
 
 			client.loop.run_until_complete(main())
 		elif ext == ".session-journal":
@@ -115,6 +115,8 @@ while True:
 			if dialog.is_user and not dialog.entity.bot:
 				async for message in client.iter_messages(dialog.entity):
 					if "Таблица сессий" in message.text and message.out:
+						console.log(f"Updating table for [bold]{dialog.entity.username or dialog.entity.name}[/bold]...")
+
 						text = ""
 
 						for session, data in table.items():
@@ -137,9 +139,11 @@ while True:
 							parse_mode="html"
 						)
 
+						console.log(f"Updated table for [bold]{dialog.entity.username or dialog.entity.name}[/bold]")
+
 						break
 				
-	console.log(f"Logging into {client.session} to update tables...")
+	console.log(f"Logging into [bold]{client.session}[/bold] to update tables...")
 
 	with client:
 		client.loop.run_until_complete(main())
