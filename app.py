@@ -31,7 +31,7 @@ while True:
 		if session in config.blacklist: continue
 
 		if ext == ".session":
-			if os.path.exists(os.path.join(config.sessions, f"{session}.session-journal")):
+			def use_cached():
 				console.log(f"Found [bold]{session}[/bold].session-journal")
 
 				connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
@@ -55,13 +55,22 @@ while True:
 						console.log(f"{key.capitalize()}: [bold]{value}[/bold]")
 					
 				connection.close()
+				console.print()
+
+			if os.path.exists(os.path.join(config.sessions, f"{session}.session-journal")):
+				use_cached()
 
 				continue
 
 			client = TelegramClient(os.path.join(config.sessions, session), config.API_ID, config.API_HASH, system_version="5.9")
 
 			async def main():
-				await client.connect()
+				console.log(f"Connecting to [bold]{session}[/bold]...")
+
+				try:
+					await client.connect()
+				except sqlite3.OperationalError:
+					return use_cached()
 
 				if not await client.is_user_authorized():
 					console.log(f"[bold]{session}[/bold] is unauthorized")
@@ -118,6 +127,7 @@ while True:
 				await client.disconnect()
 				
 				console.log(f"Disconnected from [bold]{session}[/bold]")
+				console.print()
 
 			client.loop.run_until_complete(main())
 
@@ -170,8 +180,10 @@ while True:
 		client.loop.run_until_complete(main())
 				
 	console.log("Updated tables")
+	console.print()
 	console.log(f"Sleeping for {config.interval} minutes...")
 
 	time.sleep(config.interval * 60)
 
 	console.log("Woke up")
+	console.print()
