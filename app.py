@@ -1,3 +1,4 @@
+import asyncio
 import html
 import os
 import re
@@ -8,6 +9,7 @@ from datetime import datetime
 from rich.console import Console
 
 from telethon import TelegramClient
+from telethon.types import PeerChannel
 
 import config
 
@@ -89,9 +91,17 @@ while True:
 				table[session]["username"] = me.username
 
 				async with client.conversation("@SpamBot") as conversation:
-					await conversation.send_message("/start")
+					for _ in range(7):
+						try:
+							await conversation.send_message("/start")
+							response = await conversation.get_response()
+						except asyncio.TimeoutError:
+							continue
+						else:
+							break
+					else:
+						raise
 
-					response = await conversation.get_response()
 					await conversation.mark_read()
 
 				if "Ограничения будут автоматически сняты" in response.text:
@@ -134,53 +144,48 @@ while True:
 	client = TelegramClient(os.path.join(config.sessions, config.worker), config.API_ID, config.API_HASH, system_version="5.9")
 
 	async def main():
-		async for dialog in client.iter_dialogs():
-			if dialog.is_user and not dialog.entity.bot:
-				async for message in client.iter_messages(dialog.entity):
-					if message.text and "Таблица сессий" in message.text and message.out:
-						console.log(f"Updating table for [bold]{dialog.entity.username or dialog.name}[/bold]...")
+		message = await client.get_messages(PeerChannel(config.channel), ids=config.message)
+		
+		console.log(f"Updating table...")
 
-						text = ""
+		text = ""
 
-						for session, data in table.items():
-							if data:
-								name = html.escape(data["name"])
-								username = html.escape(data["username"])
-								spamblock = html.escape(data["spamblock"])
-								task = html.escape(data["task"] or "")
+		for session, data in table.items():
+			if data:
+				name = html.escape(data["name"])
+				username = html.escape(data["username"])
+				spamblock = html.escape(data["spamblock"])
+				task = html.escape(data["task"] or "")
 
-								text += f"<a href=\"https://t.me/{username}\">{name}</a> — спамблок <b>{spamblock}</b>"
-								if task: text += f" (в работе: <b>{task}</b>)"
-							else:
-								text += f"{session} (в работе)"
+				text += f"<a href=\"https://t.me/{username}\">{name}</a> — спамблок <b>{spamblock}</b>"
+				if task: text += f" (в работе: <b>{task}</b>)"
+			else:
+				text += f"{session} (в работе)"
 
-							text += "\n"
+			text += "\n"
 
-						strfnow = datetime.now().strftime("%H:%M:%S %d.%m.%Y")
+		strfnow = datetime.now().strftime("%H:%M:%S %d.%m.%Y")
 
-						full_text = "\n\n".join([
-							"<b>Таблица сессий</b>",
-							text.strip(),
-							f"Всего (так сказать, тотал): <code>{len(table)}</code>",
-							f"Обновлено в <code>{strfnow}</code> (каждые <code>{config.interval}</code> минут)"
-						])
+		full_text = "\n\n".join([
+			"<b>Таблица сессий</b>",
+			text.strip(),
+			f"Всего (так сказать, тотал): <code>{len(table)}</code>",
+			f"Обновлено в <code>{strfnow}</code> (каждые <code>{config.interval}</code> минут)"
+		])
 
-						await message.edit(
-							full_text,
-							parse_mode="html"
-						)
+		await message.edit(
+			full_text,
+			parse_mode="html"
+		)
 
-						console.log(f"Updated table for [bold]{dialog.entity.username or dialog.name}[/bold]")
-
-						break
-				
-	console.log(f"Logging in as {config.worker} to update tables...")
+		console.log(f"Updated table")
+		console.print()
+	
+	console.log(f"Logging in as {config.worker}...")
 
 	with client:
 		client.loop.run_until_complete(main())
 				
-	console.log("Updated tables")
-	console.print()
 	console.log(f"Sleeping for {config.interval} minutes...")
 
 	time.sleep(config.interval * 60)
