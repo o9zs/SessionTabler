@@ -91,33 +91,36 @@ while True:
 				table[session]["username"] = me.username
 
 				async with client.conversation("@SpamBot") as conversation:
-					for _ in range(7):
-						try:
-							await conversation.send_message("/start")
-							response = await conversation.get_response()
-						except asyncio.TimeoutError:
-							continue
-						else:
-							break
+					await conversation.send_message("/start")
+
+					try:
+						response = await conversation.get_response()
+					except asyncio.TimeoutError:
+						console.log(f"[red bold]TimeoutError while getting spamlock, using cached value")
+				
+						connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
+						cursor = connection.cursor()
+
+						table[session]["spamblock"] = cursor.execute("SELECT spamblock FROM cache WHERE session = ?", (session,)).fetchone()
+
+						connection.close()
 					else:
-						raise
+						await conversation.mark_read()
 
-					await conversation.mark_read()
-
-				if "Ограничения будут автоматически сняты" in response.text:
-					table[session]["spamblock"] = "до " + re.search(
-						r"Ограничения будут автоматически сняты (.*?) \(по московскому времени — на три часа позже\)",
-						response.text
-					).group(1)
-				elif "Your account will be automatically released" in response.text:
-					table[session]["spamblock"] = "до " + re.search(
-						r"Your account will be automatically released on (.*?)\. Please note that if you repeat what got you limited and users report you again",
-						response.text
-					).group(1)
-				elif "К сожалению, иногда наша антиспам-система излишне сурово реагирует на некоторые действия" in response.text or "Unfortunately, some actions can trigger a harsh response from our anti-spam systems" in response.text:
-					table[session]["spamblock"] = "вечный"
-				elif "Ваш аккаунт свободен" in response.text or "You’re free as a bird" in response.text:
-					table[session]["spamblock"] = "отсутствует"
+						if "Ограничения будут автоматически сняты" in response.text:
+							table[session]["spamblock"] = "до " + re.search(
+								r"Ограничения будут автоматически сняты (.*?) \(по московскому времени — на три часа позже\)",
+								response.text
+							).group(1)
+						elif "Your account will be automatically released" in response.text:
+							table[session]["spamblock"] = "до " + re.search(
+								r"Your account will be automatically released on (.*?)\. Please note that if you repeat what got you limited and users report you again",
+								response.text
+							).group(1)
+						elif "К сожалению, иногда наша антиспам-система излишне сурово реагирует на некоторые действия" in response.text or "Unfortunately, some actions can trigger a harsh response from our anti-spam systems" in response.text:
+							table[session]["spamblock"] = "вечный"
+						elif "Ваш аккаунт свободен" in response.text or "You’re free as a bird" in response.text:
+							table[session]["spamblock"] = "отсутствует"
 
 				table[session]["task"] = None
 
@@ -181,12 +184,12 @@ while True:
 		console.log(f"Updated table")
 		console.print()
 	
-	console.log(f"Logging in as {config.worker}...")
+	console.log(f"Logging in as [bold]{config.worker}[/bold]...")
 
 	with client:
 		client.loop.run_until_complete(main())
 				
-	console.log(f"Sleeping for {config.interval} minutes...")
+	console.log(f"Sleeping for [bold]{config.interval}[/bold] minutes...")
 
 	time.sleep(config.interval * 60)
 
