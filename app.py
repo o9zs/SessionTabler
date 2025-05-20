@@ -96,7 +96,7 @@ while True:
 					try:
 						response = await conversation.get_response()
 					except asyncio.TimeoutError:
-						console.log(f"[red bold]TimeoutError while getting spamlock, using cached value")
+						console.log(f"[red bold]❌ TimeoutError while getting spamblock, using cached value[/red bold]")
 				
 						connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
 						cursor = connection.cursor()
@@ -132,7 +132,7 @@ while True:
 
 				cursor.execute(
 					"INSERT OR REPLACE INTO cache (session, name, username, spamblock, task) VALUES (?, ?, ?, ?, ?)",
-					(session, name, me.username, table[session]["spamblock"], None)
+					(session, name, me.username, table[session]["spamblock"], "")
 				)
 
 				connection.commit()
