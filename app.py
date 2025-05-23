@@ -100,12 +100,12 @@ while True:
 					try:
 						response = await conversation.get_response()
 					except asyncio.TimeoutError:
-						console.log(f"[red bold]❌ TimeoutError while getting spamblock, using cached value[/red bold]")
+						console.log(f"[yellow]❌ TimeoutError while getting spamblock, using cached value[/yellow]")
 				
 						connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
 						cursor = connection.cursor()
 
-						table[session]["spamblock"] = cursor.execute("SELECT spamblock FROM cache WHERE session = ?", (session,)).fetchone()
+						table[session]["spamblock"] = cursor.execute("SELECT spamblock FROM cache WHERE session = ?", (session,)).fetchone()[0]
 
 						connection.close()
 					else:
@@ -131,9 +131,6 @@ while True:
 				table[session]["task"] = None
 
 				console.log(f"Task: [bold]none[/bold]")
-
-				for key, value in table[session].items():
-					console.log(f"{key.capitalize()}: [bold]{value}[/bold]")
 				
 				connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
 				cursor = connection.cursor()
