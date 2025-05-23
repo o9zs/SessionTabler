@@ -4,7 +4,13 @@ API_HASH = "c3b39a0ffbcc698afb63319c95e97b61"
 sessions = "../sessions"
 worker = "utonchil"
 
-blacklist = ["johnny", "johnny2", "utonchil"]
+blacklist = [
+    worker,
+    "johnny",
+    "johnny2",
+    "electriz",
+    "electriz2"
+]
 
 channel = 2560310848
 message = 3
