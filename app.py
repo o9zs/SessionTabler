@@ -9,6 +9,7 @@ from datetime import datetime
 from rich.console import Console
 
 from telethon import TelegramClient
+from telethon.errors import RPCError
 from telethon.types import PeerChannel
 
 import config
@@ -16,7 +17,7 @@ import config
 client = TelegramClient("telethon", config.API_ID, config.API_HASH, system_version="5.9")
 
 console = Console(highlight=False)
-
+console.log()
 connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
 cursor = connection.cursor()
  
@@ -90,6 +91,9 @@ while True:
 				table[session]["name"] = name
 				table[session]["username"] = me.username
 
+				console.log(f"Name: [bold]{name}[/bold]")
+				console.log(f"Username: [bold]{me.username}[/bold]")
+
 				async with client.conversation("@SpamBot") as conversation:
 					await conversation.send_message("/start")
 
@@ -122,7 +126,11 @@ while True:
 						elif "Ваш аккаунт свободен" in response.text or "You’re free as a bird" in response.text:
 							table[session]["spamblock"] = "отсутствует"
 
+				console.log(f"Spamblock: [bold]{table[session]['spamblock']}[/bold]")
+
 				table[session]["task"] = None
+
+				console.log(f"Task: [bold]none[/bold]")
 
 				for key, value in table[session].items():
 					console.log(f"{key.capitalize()}: [bold]{value}[/bold]")
@@ -142,7 +150,15 @@ while True:
 				console.log(f"Disconnected from [bold]{session}[/bold]")
 				console.print()
 
-			client.loop.run_until_complete(main())
+			try:
+				client.loop.run_until_complete(main())
+			except RPCError as error:
+				if error.message == "FROZEN_METHOD_INVALID":
+					console.log("Frozen!")
+					
+					table[session]["frozen"] = True
+				else:
+					raise
 
 	client = TelegramClient(os.path.join(config.sessions, config.worker), config.API_ID, config.API_HASH, system_version="5.9")
 
@@ -157,11 +173,15 @@ while True:
 			if data:
 				name = html.escape(data["name"])
 				username = html.escape(data["username"])
-				spamblock = html.escape(data["spamblock"])
-				task = html.escape(data["task"] or "")
 
-				text += f"<a href=\"https://t.me/{username}\">{name}</a> — спамблок <b>{spamblock}</b>"
-				if task: text += f" (в работе: <b>{task}</b>)"
+				if "frozen" in data and data["frozen"]:
+					text += f"<a href=\"https://t.me/{username}\">{name}</a> — <b>заморожен</b> ❄"
+				else:
+					spamblock = html.escape(data["spamblock"])
+					task = html.escape(data["task"] or "")
+
+					text += f"<a href=\"https://t.me/{username}\">{name}</a> — спамблок <b>{spamblock}</b>"
+					if task: text += f" (в работе: <b>{task}</b>)"
 			else:
 				text += f"{session} (в работе)"
 
