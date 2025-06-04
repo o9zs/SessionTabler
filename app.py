@@ -17,7 +17,7 @@ import config
 client = TelegramClient("telethon", config.API_ID, config.API_HASH, system_version="5.9")
 
 console = Console(highlight=False)
-console.log()
+
 connection = sqlite3.connect(os.path.join(config.sessions, "cache.db"))
 cursor = connection.cursor()
  
@@ -74,13 +74,18 @@ while True:
 					await client.connect()
 				except sqlite3.OperationalError:
 					return use_cached()
+				except Exception as error:
+					return console.log(f"Error! [red]{str(error)}[/red]")
 
 				if not await client.is_user_authorized():
-					console.log(f"[bold]{session}[/bold] is unauthorized")
+					console.log(f"Unauthorized!")
 
-					return await client.disconnect()
+					await client.disconnect()
+					os.remove(os.path.join(config.sessions, session) + ext)
+
+					return
 				
-				console.log(f"Connected to [bold]{session}[/bold]")
+				console.log(f"Connected!")
 
 				table[session] = {}
 				
